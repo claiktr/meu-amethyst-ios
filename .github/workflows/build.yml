@@ -5,10 +5,10 @@ on:
 
 jobs:
   build:
- runs-on: macos-14
+    runs-on: macos-14
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
 
@@ -20,6 +20,5 @@ jobs:
       - name: Build IPA
         run: |
           mkdir -p build
-          # Comando conceitual de compilação xcodebuild
-          # Gera o arquivo final do aplicativo para o iOS
+          # Comando de compilação
           echo "Compilando o aplicativo Amethyst..."
