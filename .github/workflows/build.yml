@@ -17,21 +17,18 @@ jobs:
         with:
           xcode-version: '15.0'
 
-      - name: Build All Targets
+      - name: Build Xcode Project
         run: |
-          # Força a compilação usando todos os alvos internos do projeto, ignorando erros de esquema
-          xcodebuild -project Amethyst.xcodeproj -alltargets -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO || echo "Compilação concluída ou com avisos."
-
+          # Compila forçando a saída de todos os arquivos direto para uma pasta limpa chamada 'output'
+          xcodebuild -project Amethyst.xcodeproj -alltargets -configuration Release -sdk iphoneos OBJROOT=build SYMROOT=build CODE_SIGNING_ALLOWED=NO dstroot=output install
+          
       - name: Create IPA Package
         run: |
           mkdir -p Payload
-          # Copia qualquer executável .app gerado na pasta de construção
-          cp -r build/*.app Payload/ 2>/dev/null || cp -r build/Release-iphoneos/*.app Payload/ 2>/dev/null || echo "Aviso: Nenhum .app encontrado na pasta padrão."
+          # Procura profundamente por qualquer arquivo .app gerado na pasta build e joga no Payload
+          find build -name "*.app" -exec cp -r {} Payload/ \; 2>/dev/null
           
-          # Se não achou na pasta padrão, procura em todo o diretório por um arquivo .app criado
-          find . -name "*.app" -exec cp -r {} Payload/ \; 2>/dev/null
-          
-          # Compacta tudo no formato final .ipa
+          # Compacta o pacote final
           zip -r Amethyst.ipa Payload
           
       - name: Upload Finished App
