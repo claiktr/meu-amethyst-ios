@@ -33,11 +33,13 @@ jobs:
 
       - name: Build Xcode Project
         run: |
-          # Exporta explicitamente o caminho do Java instalado para que o Makefile consiga localizá-lo
-          export JAVA_HOME=$JAVA_HOME_8_X64
+          # Descobre dinamicamente o caminho real do Java 8 instalado e injeta no ambiente
+          DYNAMIC_JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
+          export JAVA_HOME=$DYNAMIC_JAVA_HOME
+          echo "Java Home definido para: $JAVA_HOME"
           
-          # Executa a compilação oficial gerando os binários nativos
-          xcodebuild -project Amethyst.xcodeproj -alltargets -configuration Release -sdk iphoneos OBJROOT=build SYMROOT=build CODE_SIGNING_ALLOWED=NO
+          # Executa a compilação oficial passando o caminho do Java direto para o Xcodebuild
+          xcodebuild -project Amethyst.xcodeproj -alltargets -configuration Release -sdk iphoneos OBJROOT=build SYMROOT=build CODE_SIGNING_ALLOWED=NO JAVA_HOME=$DYNAMIC_JAVA_HOME
 
       - name: Create IPA Package
         run: |
