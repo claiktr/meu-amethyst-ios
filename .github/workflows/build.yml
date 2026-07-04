@@ -19,16 +19,17 @@ jobs:
 
       - name: Build Xcode Project
         run: |
-          # Compila o esquema correto ignorando assinaturas e travando os caminhos
-          xcodebuild -workspace *.xcworkspace -scheme Amethyst -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO || \
-          xcodebuild -project *.xcodeproj -scheme Amethyst -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO || \
-          xcodebuild -project *.xcodeproj -scheme Launcher -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO
+          # Lista os schemes limpos e pega a primeira linha válida abaixo da palavra 'Schemes:'
+          SCHEME=$(xcodebuild -list -project Amethyst.xcodeproj | sed -n '/Schemes:/,$p' | sed '1d' | tr -d ' ' | head -n 1)
+          echo "Scheme detectado pelo sistema: $SCHEME"
+          
+          # Compila usando o esquema dinâmico encontrado
+          xcodebuild -project Amethyst.xcodeproj -scheme "$SCHEME" -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO
 
       - name: Create IPA Package
         run: |
           mkdir Payload
-          # Procura o aplicativo gerado e joga no pacote .ipa
-          cp -r build/*.app Payload/ 2>/dev/null || cp -r build/Release-iphoneos/*.app Payload/ 2>/dev/null || cp -r *.app Payload/ 2>/dev/null
+          cp -r build/*.app Payload/ 2>/dev/null || cp -r build/Release-iphoneos/*.app Payload/ 2>/dev/null
           zip -r Amethyst.ipa Payload
           
       - name: Upload Finished App
