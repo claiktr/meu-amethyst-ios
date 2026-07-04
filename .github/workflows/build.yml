@@ -17,8 +17,20 @@ jobs:
         with:
           xcode-version: '15.0'
 
-      - name: Build IPA
+      - name: Build Xcode Project
         run: |
-          mkdir -p build
-          # Comando de compilação
-          echo "Compilando o aplicativo Amethyst..."
+          # Compila o projeto gerando o aplicativo definitivo
+          xcodebuild -project Amethyst.xcodeproj -scheme Amethyst -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build
+
+      - name: Create IPA Package
+        run: |
+          # Empacota o app compilado no formato .ipa para instalação
+          mkdir Payload
+          cp -r build/Amethyst.app Payload/
+          zip -r Amethyst.ipa Payload
+          
+      - name: Upload Finished App
+        uses: actions/upload-artifact@v4
+        with:
+          name: Amethyst-iPhone13-Ready
+          path: Amethyst.ipa
