@@ -25,28 +25,28 @@ jobs:
 
       - name: Install Build Dependencies
         run: |
-          # Instala o GNU Make (gmake) necessário para compilar os códigos nativos do Amethyst
           brew install make
-          
-          # Cria os atalhos globais do gmake e dos comandos do Java 8 para o sistema dar prioridade total a eles
           sudo ln -sf /opt/homebrew/bin/gmake /usr/local/bin/gmake
-          sudo ln -sf /Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home/bin/java /usr/local/bin/java
-          sudo ln -sf /Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home/bin/javac /usr/local/bin/javac
-          sudo ln -sf /Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home/bin/jar /usr/local/bin/jar
 
       - name: Build Xcode Project
         run: |
-          # Define o caminho absoluto para o JDK 8
           FIXED_JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
+          
+          # Injeta nas variáveis locais antes do comando
           export JAVA_HOME="$FIXED_JAVA_HOME"
-          export PATH="/usr/local/bin:$FIXED_JAVA_HOME/bin:$PATH"
+          export PATH="$FIXED_JAVA_HOME/bin:$PATH"
           
-          # Confere no terminal qual versão do Java está respondendo como principal
-          java -version
-          javac -version
-          
-          # Executa a compilação oficial passando o caminho correto
-          xcodebuild -project Amethyst.xcodeproj -alltargets -configuration Release -sdk iphoneos OBJROOT=build SYMROOT=build CODE_SIGNING_ALLOWED=NO JAVA_HOME="$FIXED_JAVA_HOME"
+          # Executa o Xcode passando o Java 8 via argumentos diretos de Build Settings e forçando o PATH interno do Target
+          xcodebuild -project Amethyst.xcodeproj \
+            -alltargets \
+            -configuration Release \
+            -sdk iphoneos \
+            OBJROOT=build \
+            SYMROOT=build \
+            CODE_SIGNING_ALLOWED=NO \
+            JAVA_HOME="$FIXED_JAVA_HOME" \
+            JAVA_COMPILER="$FIXED_JAVA_HOME/bin/javac" \
+            PATH="$FIXED_JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
       - name: Create IPA Package
         run: |
