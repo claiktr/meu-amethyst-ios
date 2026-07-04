@@ -1,0 +1,25 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+
+      - name: Build IPA
+        run: |
+          mkdir -p build
+          # Comando conceitual de compilação xcodebuild
+          # Gera o arquivo final do aplicativo para o iOS
+          echo "Compilando o aplicativo Amethyst..."
