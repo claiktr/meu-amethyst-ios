@@ -17,18 +17,26 @@ jobs:
         with:
           xcode-version: '15.0'
 
+      - name: Install Build Dependencies
+        run: |
+          # Instala o GNU Make (gmake) necessário para compilar os códigos nativos do Amethyst
+          brew install make
+          
+          # Cria um link simbólico para garantir que o Xcode encontre o gmake exatamente onde ele procura
+          sudo ln -s /opt/homebrew/bin/gmake /usr/local/bin/gmake
+
       - name: Build Xcode Project
         run: |
-          # Compila forçando a saída de todos os arquivos direto para uma pasta limpa chamada 'output'
-          xcodebuild -project Amethyst.xcodeproj -alltargets -configuration Release -sdk iphoneos OBJROOT=build SYMROOT=build CODE_SIGNING_ALLOWED=NO dstroot=output install
-          
+          # Executa a compilação oficial gerando os binários nativos
+          xcodebuild -project Amethyst.xcodeproj -alltargets -configuration Release -sdk iphoneos OBJROOT=build SYMROOT=build CODE_SIGNING_ALLOWED=NO
+
       - name: Create IPA Package
         run: |
           mkdir -p Payload
-          # Procura profundamente por qualquer arquivo .app gerado na pasta build e joga no Payload
+          # Vasculha profundamente a pasta build atrás do executável real do app
           find build -name "*.app" -exec cp -r {} Payload/ \; 2>/dev/null
           
-          # Compacta o pacote final
+          # Garante o empacotamento final em .ipa
           zip -r Amethyst.ipa Payload
           
       - name: Upload Finished App
