@@ -23,20 +23,29 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Install Build Dependencies
+      - name: Inject Java 8 into Global System Paths
         run: |
+          FIXED_JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
+          
+          # Força links simbólicos globais nos caminhos padrão herdados pelo Xcode
+          sudo ln -sf "$FIXED_JAVA_HOME/bin/java" /usr/local/bin/java
+          sudo ln -sf "$FIXED_JAVA_HOME/bin/javac" /usr/local/bin/javac
+          
+          # Garante que o Homebrew Make esteja no lugar certo
           brew install make
           sudo ln -sf /opt/homebrew/bin/gmake /usr/local/bin/gmake
+          
+          # Teste rápido para validar no terminal principal antes do Xcode entrar
+          echo "=== Verificando injeção do Java ==="
+          /usr/local/bin/java -version
+          /usr/local/bin/javac -version
 
       - name: Build Xcode Project
         run: |
           FIXED_JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
           
-          # Injeta nas variáveis locais antes do comando
           export JAVA_HOME="$FIXED_JAVA_HOME"
-          export PATH="$FIXED_JAVA_HOME/bin:$PATH"
           
-          # Executa o Xcode passando o Java 8 via argumentos diretos de Build Settings e forçando o PATH interno do Target
           xcodebuild -project Amethyst.xcodeproj \
             -alltargets \
             -configuration Release \
@@ -44,9 +53,7 @@ jobs:
             OBJROOT=build \
             SYMROOT=build \
             CODE_SIGNING_ALLOWED=NO \
-            JAVA_HOME="$FIXED_JAVA_HOME" \
-            JAVA_COMPILER="$FIXED_JAVA_HOME/bin/javac" \
-            PATH="$FIXED_JAVA_HOME/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+            JAVA_HOME="$FIXED_JAVA_HOME"
 
       - name: Create IPA Package
         run: |
@@ -57,5 +64,5 @@ jobs:
       - name: Upload Finished App
         uses: actions/upload-artifact@v4
         with:
-          name: Amethyst-iPhone13-Ready
+          name: Amethyst-iPhone-Ready
           path: Amethyst.ipa
