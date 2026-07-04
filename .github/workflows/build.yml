@@ -17,14 +17,24 @@ jobs:
         with:
           xcode-version: '15.0'
 
+      - name: Install XcodeGen
+        run: |
+          # Instala a ferramenta que recria os esquemas perdidos do projeto
+          brew install xcodegen
+
+      - name: Generate Clean Project
+        run: |
+          # Força a geração de um novo projeto limpo e com esquemas públicos
+          xcodegen generate || echo "XcodeGen não necessário ou falhou, tentando compilação direta..."
+
       - name: Build Xcode Project
         run: |
-          # Lista os schemes limpos e pega a primeira linha válida abaixo da palavra 'Schemes:'
-          SCHEME=$(xcodebuild -list -project Amethyst.xcodeproj | sed -n '/Schemes:/,$p' | sed '1d' | tr -d ' ' | head -n 1)
-          echo "Scheme detectado pelo sistema: $SCHEME"
+          # Descobre dinamicamente o novo esquema gerado pelo XcodeGen
+          SCHEME=$(xcodebuild -list | sed -n '/Schemes:/,$p' | sed '1d' | tr -d ' ' | head -n 1)
+          echo "Novo Scheme gerado: $SCHEME"
           
-          # Compila usando o esquema dinâmico encontrado
-          xcodebuild -project Amethyst.xcodeproj -scheme "$SCHEME" -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO
+          # Compila o projeto gerado de forma limpa
+          xcodebuild -scheme "$SCHEME" -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO
 
       - name: Create IPA Package
         run: |
