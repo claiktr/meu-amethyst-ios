@@ -19,14 +19,22 @@ jobs:
 
       - name: Build Xcode Project
         run: |
-          # Compila o projeto gerando o aplicativo definitivo
-          xcodebuild -project Amethyst.xcodeproj -scheme Amethyst -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build
+          # Descobre automaticamente o primeiro scheme disponível para não errar o nome
+          SCHEME=$(xcodebuild -list -json | plutil -extract schemes.0 raw - || echo "")
+          if [ -z "$SCHEME" ]; then
+            # Se falhar o JSON, tenta pegar a força do formato texto
+            SCHEME=$(xcodebuild -list | sed -n '/Schemes:/,$p' | sed '1d' | tr -d ' ' | head -n 1)
+          fi
+          echo "Scheme encontrado: $SCHEME"
+          
+          # Executa a compilação com o nome detectado
+          xcodebuild -project *.xcodeproj -scheme "$SCHEME" -configuration Release -sdk iphoneos CONFIGURATION_BUILD_DIR=build CODE_SIGNING_ALLOWED=NO
 
       - name: Create IPA Package
         run: |
-          # Empacota o app compilado no formato .ipa para instalação
           mkdir Payload
-          cp -r build/Amethyst.app Payload/
+          # Copia o aplicativo gerado para dentro do pacote
+          cp -r build/*.app Payload/ 2>/dev/null || cp -r build/Release-iphoneos/*.app Payload/
           zip -r Amethyst.ipa Payload
           
       - name: Upload Finished App
