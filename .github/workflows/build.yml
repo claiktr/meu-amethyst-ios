@@ -23,28 +23,43 @@ jobs:
           distribution: 'zulu'
           java-version: '8'
 
-      - name: Inject Java 8 into Global System Paths
+      - name: Force Java 8 injection on Xcode Environment
         run: |
           FIXED_JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
           
-          # Força links simbólicos globais nos caminhos padrão herdados pelo Xcode
+          # 1. Cria links simbólicos globais no /usr/local/bin (herdado pelo Xcode)
           sudo ln -sf "$FIXED_JAVA_HOME/bin/java" /usr/local/bin/java
           sudo ln -sf "$FIXED_JAVA_HOME/bin/javac" /usr/local/bin/javac
+          sudo ln -sf "$FIXED_JAVA_HOME/bin/jar" /usr/local/bin/jar
           
-          # Garante que o Homebrew Make esteja no lugar certo
+          # 2. ENGANA O /usr/libexec/java_home
+          # Se o Makefile rodar "java_home -v 1.8", nosso script intercepta e responde o caminho correto imediatamente
+          sudo mkdir -p /usr/local/libexec
+          sudo rm -f /usr/local/libexec/java_home
+          echo "#!/bin/bash" | sudo tee /usr/local/libexec/java_home
+          echo "echo '$FIXED_JAVA_HOME'" | sudo tee -a /usr/local/libexec/java_home
+          sudo chmod +x /usr/local/libexec/java_home
+          
+          # Copia também para o /usr/local/bin caso chamem direto sem o "libexec"
+          sudo ln -sf /usr/local/libexec/java_home /usr/local/bin/java_home
+
+          # 3. Garante o GNU Make (gmake) exigido pelo Amethyst
           brew install make
           sudo ln -sf /opt/homebrew/bin/gmake /usr/local/bin/gmake
           
-          # Teste rápido para validar no terminal principal antes do Xcode entrar
+          # Testes de validação no log da Action
           echo "=== Verificando injeção do Java ==="
-          /usr/local/bin/java -version
-          /usr/local/bin/javac -version
+          java -version
+          javac -version
+          java_home -v 1.8
 
       - name: Build Xcode Project
         run: |
           FIXED_JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
           
+          # Variáveis normais de ambiente para desencargo de consciência
           export JAVA_HOME="$FIXED_JAVA_HOME"
+          export PATH="/usr/local/bin:/usr/local/libexec:$FIXED_JAVA_HOME/bin:$PATH"
           
           xcodebuild -project Amethyst.xcodeproj \
             -alltargets \
