@@ -1,83 +1,18 @@
-name: Build iOS App
-
-on:
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: macos-14
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '15.0'
-
-      - name: Install Java 8 (JDK 8)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '8'
-
-      - name: Force Java 8 injection on Xcode Environment
+- name: Build Xcode Project
         run: |
           FIXED_JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
           
-          # 1. Cria links simbólicos globais no /usr/local/bin (herdado pelo Xcode)
-          sudo ln -sf "$FIXED_JAVA_HOME/bin/java" /usr/local/bin/java
-          sudo ln -sf "$FIXED_JAVA_HOME/bin/javac" /usr/local/bin/javac
-          sudo ln -sf "$FIXED_JAVA_HOME/bin/jar" /usr/local/bin/jar
-          
-          # 2. ENGANA O /usr/libexec/java_home
-          # Se o Makefile rodar "java_home -v 1.8", nosso script intercepta e responde o caminho correto imediatamente
-          sudo mkdir -p /usr/local/libexec
-          sudo rm -f /usr/local/libexec/java_home
-          echo "#!/bin/bash" | sudo tee /usr/local/libexec/java_home
-          echo "echo '$FIXED_JAVA_HOME'" | sudo tee -a /usr/local/libexec/java_home
-          sudo chmod +x /usr/local/libexec/java_home
-          
-          # Copia também para o /usr/local/bin caso chamem direto sem o "libexec"
-          sudo ln -sf /usr/local/libexec/java_home /usr/local/bin/java_home
-
-          # 3. Garante o GNU Make (gmake) exigido pelo Amethyst
-          brew install make
-          sudo ln -sf /opt/homebrew/bin/gmake /usr/local/bin/gmake
-          
-          # Testes de validação no log da Action
-          echo "=== Verificando injeção do Java ==="
-          java -version
-          javac -version
-          java_home -v 1.8
-
-      - name: Build Xcode Project
-        run: |
-          FIXED_JAVA_HOME="/Users/runner/hostedtoolcache/Java_Zulu_jdk/8.0.492-9/arm64/Contents/Home"
-          
-          # Variáveis normais de ambiente para desencargo de consciência
           export JAVA_HOME="$FIXED_JAVA_HOME"
           export PATH="/usr/local/bin:/usr/local/libexec:$FIXED_JAVA_HOME/bin:$PATH"
           
+          # Forçamos ARCHS e ONLY_ACTIVE_ARCH para garantir que não passe "undefined_arch"
           xcodebuild -project Amethyst.xcodeproj \
             -alltargets \
             -configuration Release \
             -sdk iphoneos \
+            ARCHS="arm64" \
+            ONLY_ACTIVE_ARCH=NO \
             OBJROOT=build \
             SYMROOT=build \
             CODE_SIGNING_ALLOWED=NO \
             JAVA_HOME="$FIXED_JAVA_HOME"
-
-      - name: Create IPA Package
-        run: |
-          mkdir -p Payload
-          find build -name "*.app" -exec cp -r {} Payload/ \; 2>/dev/null
-          zip -r Amethyst.ipa Payload
-          
-      - name: Upload Finished App
-        uses: actions/upload-artifact@v4
-        with:
-          name: Amethyst-iPhone-Ready
-          path: Amethyst.ipa
